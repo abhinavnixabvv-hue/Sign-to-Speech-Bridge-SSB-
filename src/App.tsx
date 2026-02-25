@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SignLanguageRecognition } from './components/SignLanguageRecognition';
 import { ProjectAbstract } from './components/ProjectAbstract';
+import { TextToSign } from './components/TextToSign';
 import { 
   Hand, 
   Mic2, 
@@ -51,7 +52,7 @@ const Card = ({ title, description, icon: Icon, delay = 0 }: { title: string, de
 );
 
 export default function App() {
-  const [view, setView] = useState<'landing' | 'recognition' | 'abstract'>('landing');
+  const [view, setView] = useState<'landing' | 'recognition' | 'abstract' | 'textToSign'>('landing');
 
   if (view === 'recognition') {
     return (
@@ -65,6 +66,14 @@ export default function App() {
     return (
       <AnimatePresence mode="wait">
         <ProjectAbstract onBack={() => setView('landing')} />
+      </AnimatePresence>
+    );
+  }
+
+  if (view === 'textToSign') {
+    return (
+      <AnimatePresence mode="wait">
+        <TextToSign onBack={() => setView('landing')} />
       </AnimatePresence>
     );
   }
@@ -118,6 +127,12 @@ export default function App() {
                 className="px-8 py-4 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 flex items-center gap-2"
               >
                 Launch Recognition Tool <Scan className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => setView('textToSign')}
+                className="px-8 py-4 bg-white text-emerald-600 border border-emerald-200 rounded-xl font-medium hover:bg-emerald-50 transition-all flex items-center gap-2"
+              >
+                Text to Sign <Hand className="w-4 h-4" />
               </button>
               <button 
                 onClick={() => setView('abstract')}

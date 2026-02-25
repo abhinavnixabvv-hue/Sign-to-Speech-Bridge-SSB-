@@ -1,6 +1,6 @@
 {
   "name": "Sign-to-Speech Bridge (SSB)",
-  "description": "A real-time assistive communication system for Indian Sign Language (ISL) users, designed for healthcare and emergency scenarios.",
+  "description": "A real-time assistive communication system for Indian Sign Language (ISL) and American Sign Language (ASL) users, designed for healthcare and emergency scenarios.",
   "requestFramePermissions": [
     "camera"
   ]

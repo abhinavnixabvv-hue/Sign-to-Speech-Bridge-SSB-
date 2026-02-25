@@ -1,21 +1,42 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Camera, CameraOff, Info, Hand, Loader2, Trash2, BookOpen } from "lucide-react";
+import { ArrowLeft, Camera, CameraOff, Info, Hand, Loader2, Trash2, BookOpen, Type, Siren } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHandLandmarker } from "@/hooks/useHandLandmarker";
 import { classifyGesture, type GestureResult } from "@/lib/gestureClassifier";
 import { HandLandmarkCanvas } from "@/components/HandLandmarkCanvas";
 import { SignLanguageLibrary } from "@/components/SignLanguageLibrary";
+import { TextToSign } from "@/components/TextToSign";
+import { EmergencySigns } from "@/components/EmergencySigns";
 import { LandmarkSmoother } from "@/lib/smoothing";
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision";
 
-type SignTab = "camera" | "library";
+type SignLanguage = 'ASL' | 'ISL';
+
+type SignTab = "camera" | "library" | "textToSign" | "emergency";
 
 interface SignLanguageRecognitionProps {
   onBack: () => void;
 }
 
-const commonSigns = [
+const aslSigns = [
+  { sign: "A / E / M / N / S / T / Fist", emoji: "✊", description: "All fingers closed into a fist", category: "alphabet" },
+  { sign: "B / W / Hello", emoji: "✋", description: "All fingers extended, open hand", category: "alphabet" },
+  { sign: "C / G / Q", emoji: "🤏", description: "Thumb and index finger pinching", category: "alphabet" },
+  { sign: "D / I / L / P / X / Z / One", emoji: "☝️", description: "Only index finger up", category: "alphabet" },
+  { sign: "F / O / OK", emoji: "👌", description: "Thumb + index tips touching, others up", category: "alphabet" },
+  { sign: "H / K / R / U / V / Two", emoji: "✌️", description: "Index + middle up, rest closed", category: "alphabet" },
+  { sign: "J / Y / Call Me", emoji: "🤙", description: "Thumb + pinky extended like a phone", category: "alphabet" },
+  { sign: "Thumbs Up / YES", emoji: "👍", description: "Thumb up, fingers closed", category: "response" },
+  { sign: "Thumbs Down / NO", emoji: "👎", description: "Thumb down, fingers closed", category: "response" },
+  { sign: "I Love You", emoji: "🤟", description: "Thumb + index + pinky extended", category: "expression" },
+  { sign: "Rock On", emoji: "🤘", description: "Index + pinky up, no thumb", category: "expression" },
+  { sign: "Vulcan Salute", emoji: "🖖", category: "expression", description: "Spock's greeting, split between middle and ring" },
+  { sign: "Three", emoji: "3️⃣", description: "Index + middle + ring up", category: "number" },
+  { sign: "Four", emoji: "4️⃣", description: "All fingers up, thumb closed", category: "number" },
+];
+
+const islSigns = [
   { sign: "Hello", emoji: "👋", description: "All fingers extended, open hand", category: "greeting" },
   { sign: "Thumbs Up", emoji: "👍", description: "Thumb up, fingers closed", category: "response" },
   { sign: "Thumbs Down", emoji: "👎", description: "Thumb down, fingers closed", category: "response" },
@@ -30,14 +51,11 @@ const commonSigns = [
   { sign: "Two", emoji: "2️⃣", description: "Index + middle up", category: "number" },
   { sign: "Three", emoji: "3️⃣", description: "Index + middle + ring up", category: "number" },
   { sign: "Four", emoji: "4️⃣", description: "All fingers up, thumb closed", category: "number" },
-  { sign: "Five", emoji: "5️⃣", description: "All fingers up including thumb", category: "number" },
-  { sign: "Point Up", emoji: "☝️", description: "Index finger pointing upwards", category: "direction" },
-  { sign: "Point Right", emoji: "👉", description: "Index finger pointing to the right", category: "direction" },
-  { sign: "Point Left", emoji: "👈", description: "Index finger pointing to the left", category: "direction" },
 ];
 
 export function SignLanguageRecognition({ onBack }: SignLanguageRecognitionProps) {
   const [activeTab, setActiveTab] = useState<SignTab>("camera");
+  const [language, setLanguage] = useState<SignLanguage>("ASL");
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [detectedSign, setDetectedSign] = useState<GestureResult | null>(null);
@@ -48,6 +66,8 @@ export function SignLanguageRecognition({ onBack }: SignLanguageRecognitionProps
   const streamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number>(0);
   const smoothersRef = useRef<LandmarkSmoother[]>([]);
+
+  const commonSigns = language === 'ASL' ? aslSigns : islSigns;
 
   const { initModel, detect, isModelLoading, isModelReady } = useHandLandmarker();
 
@@ -167,30 +187,73 @@ export function SignLanguageRecognition({ onBack }: SignLanguageRecognitionProps
           </div>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="mb-6 flex gap-2 rounded-xl bg-slate-200 p-1">
-          <button
-            onClick={() => setActiveTab("camera")}
-            className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-              activeTab === "camera"
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <Camera className="h-4 w-4" />
-            Live Recognition
-          </button>
-          <button
-            onClick={() => setActiveTab("library")}
-            className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-              activeTab === "library"
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <BookOpen className="h-4 w-4" />
-            Sign Library
-          </button>
+        {/* Tab Switcher & Language Selector */}
+        <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div className="flex gap-2 rounded-xl bg-slate-200 p-1 w-full sm:w-auto">
+            <button
+              onClick={() => setActiveTab("camera")}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                activeTab === "camera"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <Camera className="h-4 w-4" />
+              Live Recognition
+            </button>
+            <button
+              onClick={() => setActiveTab("library")}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                activeTab === "library"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <BookOpen className="h-4 w-4" />
+              Sign Library
+            </button>
+            <button
+              onClick={() => setActiveTab("textToSign")}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                activeTab === "textToSign"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <Type className="h-4 w-4" />
+              Text to Sign
+            </button>
+            <button
+              onClick={() => setActiveTab("emergency")}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                activeTab === "emergency"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <Siren className="h-4 w-4" />
+              Emergency
+            </button>
+          </div>
+
+          <div className="flex gap-2 bg-emerald-100/50 p-1 rounded-xl border border-emerald-200 w-full sm:w-auto">
+            <button
+              onClick={() => setLanguage('ASL')}
+              className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                language === 'ASL' ? 'bg-emerald-600 text-white shadow-sm' : 'text-emerald-700 hover:bg-emerald-100'
+              }`}
+            >
+              ASL
+            </button>
+            <button
+              onClick={() => setLanguage('ISL')}
+              className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                language === 'ISL' ? 'bg-emerald-600 text-white shadow-sm' : 'text-emerald-700 hover:bg-emerald-100'
+              }`}
+            >
+              ISL
+            </button>
+          </div>
         </div>
 
         {activeTab === "camera" ? (
@@ -248,11 +311,26 @@ export function SignLanguageRecognition({ onBack }: SignLanguageRecognitionProps
                       <div className="rounded-full bg-slate-800 p-6">
                         <Camera className="h-12 w-12 text-slate-600" />
                       </div>
-                      <p className="text-center text-slate-400">
-                        {hasPermission === false
-                          ? "Camera access was denied. Please enable it in your browser settings."
-                          : "Enable your camera to start sign language recognition"}
-                      </p>
+                      <div className="text-center">
+                        <p className="text-slate-400 mb-4 max-w-xs">
+                          {hasPermission === false
+                            ? "Camera access was denied. Please check your browser settings and ensure you have granted permission to this site."
+                            : "Enable your camera to start sign language recognition"}
+                        </p>
+                        {hasPermission === false && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                              setHasPermission(null);
+                              startCamera();
+                            }}
+                            className="text-emerald-600 border-emerald-600 hover:bg-emerald-50"
+                          >
+                            Try Again
+                          </Button>
+                        )}
+                      </div>
                     </>
                   )}
                 </div>
@@ -363,8 +441,12 @@ export function SignLanguageRecognition({ onBack }: SignLanguageRecognitionProps
             </div>
           </div>
         </div>
+        ) : activeTab === "library" ? (
+          <SignLanguageLibrary language={language} />
+        ) : activeTab === "textToSign" ? (
+          <TextToSign />
         ) : (
-          <SignLanguageLibrary />
+          <EmergencySigns />
         )}
       </div>
     </motion.div>

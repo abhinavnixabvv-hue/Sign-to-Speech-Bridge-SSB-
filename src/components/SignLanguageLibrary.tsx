@@ -2,7 +2,26 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Search, Info } from 'lucide-react';
 
-const commonSigns = [
+type SignLanguage = 'ASL' | 'ISL';
+
+const aslSigns = [
+  { sign: "A / E / S / T / Fist", emoji: "✊", description: "All fingers closed into a fist", category: "alphabet" },
+  { sign: "B / M / N / W / Hello", emoji: "✋", description: "All fingers extended, open hand", category: "alphabet" },
+  { sign: "C / G / Q", emoji: "🤏", description: "Thumb and index finger pinching", category: "alphabet" },
+  { sign: "D / I / L / One", emoji: "☝️", description: "Only index finger up", category: "alphabet" },
+  { sign: "F / O / OK", emoji: "👌", description: "Thumb + index tips touching, others up", category: "alphabet" },
+  { sign: "H / K / R / U / V / Two", emoji: "✌️", description: "Index + middle up, rest closed", category: "alphabet" },
+  { sign: "J / Y / Call Me", emoji: "🤙", description: "Thumb + pinky extended like a phone", category: "alphabet" },
+  { sign: "Thumbs Up / YES", emoji: "👍", description: "Thumb up, fingers closed", category: "response" },
+  { sign: "Thumbs Down / NO", emoji: "👎", description: "Thumb down, fingers closed", category: "response" },
+  { sign: "I Love You", emoji: "🤟", description: "Thumb + index + pinky extended", category: "expression" },
+  { sign: "Rock On", emoji: "🤘", description: "Index + pinky up, no thumb", category: "expression" },
+  { sign: "Vulcan Salute", emoji: "🖖", category: "expression", description: "Spock's greeting, split between middle and ring" },
+  { sign: "Three", emoji: "3️⃣", description: "Index + middle + ring up", category: "number" },
+  { sign: "Four", emoji: "4️⃣", description: "All fingers up, thumb closed", category: "number" },
+];
+
+const islSigns = [
   { sign: "Hello", emoji: "👋", description: "All fingers extended, open hand", category: "greeting" },
   { sign: "Thumbs Up", emoji: "👍", description: "Thumb up, fingers closed", category: "response" },
   { sign: "Thumbs Down", emoji: "👎", description: "Thumb down, fingers closed", category: "response" },
@@ -17,55 +36,71 @@ const commonSigns = [
   { sign: "Two", emoji: "2️⃣", description: "Index + middle up", category: "number" },
   { sign: "Three", emoji: "3️⃣", description: "Index + middle + ring up", category: "number" },
   { sign: "Four", emoji: "4️⃣", description: "All fingers up, thumb closed", category: "number" },
-  { sign: "Five", emoji: "5️⃣", description: "All fingers up including thumb", category: "number" },
-  { sign: "Point Up", emoji: "☝️", description: "Index finger pointing upwards", category: "direction" },
-  { sign: "Point Right", emoji: "👉", description: "Index finger pointing to the right", category: "direction" },
-  { sign: "Point Left", emoji: "👈", description: "Index finger pointing to the left", category: "direction" },
 ];
 
-export function SignLanguageLibrary() {
+export function SignLanguageLibrary({ language = 'ASL' }: { language?: SignLanguage }) {
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  const signs = language === 'ASL' ? aslSigns : islSigns;
+
+  const filteredSigns = signs.filter(item => 
+    item.sign.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Sign Library</h2>
-          <p className="text-slate-600">Explore common signs and their meanings</p>
+          <h2 className="text-2xl font-bold text-slate-900">{language} Sign Library</h2>
+          <p className="text-slate-600">Explore common {language} signs and their meanings</p>
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input 
             type="text" 
             placeholder="Search signs..." 
-            className="pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full md:w-64"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full md:w-64 transition-all"
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {commonSigns.map((item, i) => (
-          <motion.div
-            key={item.sign}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-2xl">
-                {item.emoji}
+      {filteredSigns.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredSigns.map((item, i) => (
+            <motion.div
+              key={item.sign}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-2xl">
+                  {item.emoji}
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900">{item.sign}</h3>
+                  <span className="text-xs font-medium text-emerald-600 uppercase tracking-wider">{item.category}</span>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-slate-900">{item.sign}</h3>
-                <span className="text-xs font-medium text-emerald-600 uppercase tracking-wider">{item.category}</span>
-              </div>
-            </div>
-            <p className="text-sm text-slate-600 leading-relaxed flex items-start gap-2">
-              <Info className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
-              {item.description}
-            </p>
-          </motion.div>
-        ))}
-      </div>
+              <p className="text-sm text-slate-600 leading-relaxed flex items-start gap-2">
+                <Info className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
+                {item.description}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+          <Search className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-slate-900">No signs found</h3>
+          <p className="text-slate-500">Try adjusting your search query</p>
+        </div>
+      )}
     </div>
   );
 }

@@ -48,16 +48,18 @@ export function classifyGesture(landmarks: NormalizedLandmark[]): GestureResult 
 
   // 3. Gesture Logic
   
-  // --- NUMBERS ---
+  // --- NUMBERS & ALPHABET ---
   
-  // One
+  // One / D / I / L / P / X / Z
   if (indexExtended && !middleExtended && !ringExtended && !pinkyExtended && !thumbExtended) {
-    return { name: "One", emoji: "1️⃣", category: "number" };
+    if (landmarks[8].y < landmarks[6].y - 0.1) {
+      return { name: "D / I / L / One", emoji: "☝️", category: "alphabet" };
+    }
   }
   
-  // Two / Peace
+  // Two / Peace / H / K / R / U / V
   if (indexExtended && middleExtended && !ringExtended && !pinkyExtended && !thumbExtended) {
-    return { name: "Two", emoji: "2️⃣", category: "number" };
+    return { name: "H / K / R / U / V / Two", emoji: "✌️", category: "alphabet" };
   }
   
   // Three
@@ -70,34 +72,40 @@ export function classifyGesture(landmarks: NormalizedLandmark[]): GestureResult 
     return { name: "Four", emoji: "4️⃣", category: "number" };
   }
   
-  // Five / Hello / Stop
+  // Five / Hello / B / M / N / W
   if (indexExtended && middleExtended && ringExtended && pinkyExtended && thumbExtended) {
-    if (landmarks[8].y < landmarks[0].y) {
-       return { name: "Five / Hello", emoji: "👋", category: "greeting" };
+    const distMiddleRing = getDistance(landmarks[12], landmarks[16]);
+    if (distMiddleRing < 0.08) { // Not Spock
+      return { name: "B / M / N / W / Hello", emoji: "✋", category: "alphabet" };
     }
   }
 
-  // --- RESPONSES ---
+  // --- RESPONSES & ALPHABET ---
 
   // Thumbs Up / Down
   if (thumbExtended && !indexExtended && !middleExtended && !ringExtended && !pinkyExtended) {
     if (landmarks[4].y < landmarks[3].y) {
-      return { name: "Thumbs Up", emoji: "👍", category: "response" };
+      return { name: "Thumbs Up / YES", emoji: "👍", category: "response" };
     }
     if (landmarks[4].y > landmarks[3].y) {
-      return { name: "Thumbs Down", emoji: "👎", category: "response" };
+      return { name: "Thumbs Down / NO", emoji: "👎", category: "response" };
     }
   }
 
-  // OK
+  // OK / A / F / O
   const distThumbIndex = getDistance(landmarks[4], landmarks[8]);
   if (distThumbIndex < 0.04 && middleExtended && ringExtended && pinkyExtended) {
-    return { name: "OK", emoji: "👌", category: "response" };
+    return { name: "A / F / O / OK", emoji: "👌", category: "alphabet" };
   }
 
-  // Fist
+  // Fist / E / S / T
   if (!indexExtended && !middleExtended && !ringExtended && !pinkyExtended && !thumbExtended) {
-    return { name: "Fist", emoji: "✊", category: "response" };
+    return { name: "E / S / T / Fist", emoji: "✊", category: "alphabet" };
+  }
+
+  // Pinch / C / G / Q
+  if (distThumbIndex < 0.06 && !middleExtended && !ringExtended && !pinkyExtended) {
+    return { name: "C / G / Q", emoji: "🤏", category: "alphabet" };
   }
 
   // --- EXPRESSIONS ---
@@ -112,9 +120,9 @@ export function classifyGesture(landmarks: NormalizedLandmark[]): GestureResult 
     return { name: "Rock On", emoji: "🤘", category: "expression" };
   }
 
-  // Call Me
+  // Call Me / J / Y
   if (thumbExtended && !indexExtended && !middleExtended && !ringExtended && pinkyExtended) {
-    return { name: "Call Me", emoji: "🤙", category: "expression" };
+    return { name: "J / Y / Call Me", emoji: "🤙", category: "alphabet" };
   }
 
   // Pointing

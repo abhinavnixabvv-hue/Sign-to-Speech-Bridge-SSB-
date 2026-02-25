@@ -15,7 +15,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
 interface AbstractSectionProps {
@@ -49,45 +49,102 @@ export function ProjectAbstract({ onBack }: { onBack: () => void }) {
   const [isGenerating, setIsGenerating] = React.useState(false);
 
   const downloadPDF = async () => {
-    if (!contentRef.current) return;
+    console.log('Download PDF triggered');
+    if (!contentRef.current) {
+      console.error('Content ref is null');
+      return;
+    }
+    
     setIsGenerating(true);
     try {
+      // Wait for animations to settle
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      console.log('Capturing canvas...');
       const canvas = await html2canvas(contentRef.current, {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        windowWidth: contentRef.current.scrollWidth,
+        windowHeight: contentRef.current.scrollHeight,
+        x: 0,
+        y: 0,
+        scrollX: 0,
+        scrollY: 0,
+        onclone: (clonedDoc) => {
+          // Fix for html2canvas not supporting oklch colors in Tailwind v4
+          const style = clonedDoc.createElement('style');
+          style.innerHTML = `
+            :root {
+              --emerald-50: #ecfdf5;
+              --emerald-100: #d1fae5;
+              --emerald-500: #10b981;
+              --emerald-600: #059669;
+              --emerald-700: #047857;
+              --slate-50: #f8fafc;
+              --slate-100: #f1f5f9;
+              --slate-200: #e2e8f0;
+              --slate-400: #94a3b8;
+              --slate-500: #64748b;
+              --slate-600: #475569;
+              --slate-800: #1e293b;
+              --slate-900: #0f172a;
+            }
+            /* Force standard color parsing for html2canvas */
+            .bg-white { background-color: #ffffff !important; }
+            .bg-slate-50 { background-color: #f8fafc !important; }
+            .bg-emerald-600 { background-color: #059669 !important; }
+            .bg-emerald-100 { background-color: #d1fae5 !important; }
+            .bg-emerald-50 { background-color: #ecfdf5 !important; }
+            .text-slate-900 { color: #0f172a !important; }
+            .text-slate-600 { color: #475569 !important; }
+            .text-slate-800 { color: #1e293b !important; }
+            .text-emerald-600 { color: #059669 !important; }
+            .text-emerald-700 { color: #047857 !important; }
+            .text-emerald-500 { color: #10b981 !important; }
+            .border-slate-100 { border-color: #f1f5f9 !important; }
+            .border-slate-200 { border-color: #e2e8f0 !important; }
+            .border-emerald-100 { border-color: #d1fae5 !important; }
+          `;
+          clonedDoc.head.appendChild(style);
+        }
       });
       
+      console.log('Canvas captured, generating PDF...');
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
-        orientation: 'portrait',
+        orientation: 'p',
         unit: 'mm',
         format: 'a4'
       });
-
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
       
-      // Handle multi-page if content is too long
-      let heightLeft = pdfHeight;
-      let position = 0;
+      const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      let heightLeft = imgHeight;
+      let position = 0;
+      
+      // Page 1
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - pdfHeight;
+      
+      // Additional pages
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
-
+      
+      console.log('Saving PDF...');
       pdf.save('SSB_Project_Abstract.pdf');
+      console.log('PDF saved successfully');
     } catch (error) {
       console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
     } finally {
       setIsGenerating(false);
     }
