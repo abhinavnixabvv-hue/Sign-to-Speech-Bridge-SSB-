@@ -194,6 +194,16 @@ export function classifyGesture(landmarks: NormalizedLandmark[]): GestureResult 
 
   // --- RESPONSES & NUMBERS ---
 
+  // HELP: Based on provided landmark data (Thumb up, Middle up, others curled)
+  if (thumbExtended && thumbUp && middleExtended && !indexExtended && !ringExtended && !pinkyExtended) {
+    return { name: "HELP", emoji: "🆘", category: "emergency" };
+  }
+
+  // HELLO: All fingers extended (Open hand)
+  if (indexExtended && middleExtended && ringExtended && pinkyExtended && thumbExtended) {
+    return { name: "HELLO", emoji: "👋", category: "greeting" };
+  }
+
   if (thumbExtended && !indexExtended && !middleExtended && !ringExtended && !pinkyExtended) {
     if (thumbUp) return { name: "Thumbs Up / YES", emoji: "👍", category: "response" };
     if (thumbDown) return { name: "Thumbs Down / NO", emoji: "👎", category: "response" };

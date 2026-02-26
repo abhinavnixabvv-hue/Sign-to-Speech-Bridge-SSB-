@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Camera, CameraOff, Info, Hand, Loader2, Trash2, BookOpen, Type, Siren, Activity } from "lucide-react";
+import { ArrowLeft, Camera, CameraOff, Info, Hand, Loader2, Trash2, BookOpen, Type, Siren, Activity, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHandLandmarker } from "@/hooks/useHandLandmarker";
 import { classifyGesture, type GestureResult } from "@/lib/gestureClassifier";
@@ -9,12 +9,15 @@ import { SignLanguageLibrary } from "@/components/SignLanguageLibrary";
 import { TextToSign } from "@/components/TextToSign";
 import { EmergencySigns } from "@/components/EmergencySigns";
 import { ModelInsights } from "@/components/ModelInsights";
+import { LandmarkDataCollector } from "@/components/LandmarkDataCollector";
 import { LandmarkSmoother } from "@/lib/smoothing";
+import { KNNClassifier } from "@/lib/knnClassifier";
+import { customTrainingData } from "@/lib/customData";
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision";
 
 type SignLanguage = 'ASL' | 'ISL';
 
-type SignTab = "camera" | "library" | "textToSign" | "emergency" | "insights";
+type SignTab = "camera" | "library" | "textToSign" | "emergency" | "insights" | "collector";
 
 interface SignLanguageRecognitionProps {
   onBack: () => void;
@@ -46,6 +49,8 @@ const aslSigns = [
   { sign: "X", emoji: "☝️", description: "Index finger hooked", category: "alphabet" },
   { sign: "Y", emoji: "🤙", description: "Thumb and pinky extended", category: "alphabet" },
   { sign: "Z", emoji: "☝️", description: "Index finger draws a Z", category: "alphabet" },
+  { sign: "HELP", emoji: "🆘", description: "Thumb up with middle finger extended", category: "emergency" },
+  { sign: "HELLO", emoji: "👋", description: "Open hand, all fingers extended", category: "greeting" },
   { sign: "Thumbs Up / YES", emoji: "👍", description: "Thumb up, fingers closed", category: "response" },
   { sign: "Thumbs Down / NO", emoji: "👎", description: "Thumb down, fingers closed", category: "response" },
   { sign: "I Love You", emoji: "🤟", description: "Thumb + index + pinky extended", category: "expression" },
@@ -85,6 +90,7 @@ export function SignLanguageRecognition({ onBack }: SignLanguageRecognitionProps
   const streamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number>(0);
   const smoothersRef = useRef<LandmarkSmoother[]>([]);
+  const knnRef = useRef<KNNClassifier>(new KNNClassifier(customTrainingData));
 
   const commonSigns = language === 'ASL' ? aslSigns : islSigns;
 
@@ -109,7 +115,23 @@ export function SignLanguageRecognition({ onBack }: SignLanguageRecognitionProps
       setCurrentLandmarks(smoothedLandmarks);
 
       // Classify the first detected hand using smoothed data
-      const gesture = classifyGesture(smoothedLandmarks[0]);
+      let gesture = classifyGesture(smoothedLandmarks[0]);
+      
+      // If rule-based fails or for specific complex signs, use KNN
+      if (!gesture || gesture.name === "HELP" || gesture.name === "HELLO") {
+        const knnResult = knnRef.current.predict(smoothedLandmarks[0]);
+        if (knnResult && knnResult.confidence > 0.6) {
+          const signInfo = commonSigns.find(s => s.sign === knnResult.label);
+          if (signInfo) {
+            gesture = { 
+              name: signInfo.sign, 
+              emoji: signInfo.emoji, 
+              category: signInfo.category 
+            };
+          }
+        }
+      }
+
       if (gesture) {
         setDetectedSign(gesture);
         // Only log if different from last detection to avoid spam
@@ -263,6 +285,17 @@ export function SignLanguageRecognition({ onBack }: SignLanguageRecognitionProps
             >
               <Activity className="h-4 w-4" />
               Insights
+            </button>
+            <button
+              onClick={() => setActiveTab("collector")}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                activeTab === "collector"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <Database className="h-4 w-4" />
+              Data Collector
             </button>
           </div>
 
@@ -477,6 +510,8 @@ export function SignLanguageRecognition({ onBack }: SignLanguageRecognitionProps
           <TextToSign />
         ) : activeTab === "insights" ? (
           <ModelInsights />
+        ) : activeTab === "collector" ? (
+          <LandmarkDataCollector />
         ) : (
           <EmergencySigns />
         )}

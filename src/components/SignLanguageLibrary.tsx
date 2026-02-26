@@ -30,6 +30,8 @@ const aslSigns = [
   { sign: "X", emoji: "☝️", description: "Index finger hooked", category: "alphabet" },
   { sign: "Y", emoji: "🤙", description: "Thumb and pinky extended", category: "alphabet" },
   { sign: "Z", emoji: "☝️", description: "Index finger draws a Z", category: "alphabet" },
+  { sign: "HELP", emoji: "🆘", description: "Thumb up with middle finger extended", category: "emergency" },
+  { sign: "HELLO", emoji: "👋", description: "Open hand, all fingers extended", category: "greeting" },
   { sign: "Thumbs Up / YES", emoji: "👍", description: "Thumb up, fingers closed", category: "response" },
   { sign: "Thumbs Down / NO", emoji: "👎", description: "Thumb down, fingers closed", category: "response" },
   { sign: "I Love You", emoji: "🤟", description: "Thumb + index + pinky extended", category: "expression" },
