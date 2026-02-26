@@ -6,87 +6,93 @@ import {
 } from 'recharts';
 import { Cpu, Activity, Grid3X3, Zap } from 'lucide-react';
 
-const aslData = {
-  accuracy: [
-    { epoch: 1, train: 0.8658, val: 0.9893 },
-    { epoch: 2, train: 0.9777, val: 0.9838 },
-    { epoch: 3, train: 0.9844, val: 0.9774 },
-    { epoch: 4, train: 0.9887, val: 1.0000 },
-    { epoch: 5, train: 0.9904, val: 0.9993 },
-    { epoch: 10, train: 0.9968, val: 0.9960 },
-    { epoch: 20, train: 0.9979, val: 0.9989 },
-  ],
-  loss: [
-    { epoch: 1, train: 0.5274, val: 0.0335 },
-    { epoch: 2, train: 0.0680, val: 0.0532 },
-    { epoch: 3, train: 0.0478, val: 0.0540 },
-    { epoch: 4, train: 0.0355, val: 0.0048 },
-    { epoch: 20, train: 0.0059, val: 0.0024 },
-  ],
-  architecture: [
-    { layer: "Conv2D (100 filters)", params: 1000, type: "Feature Extraction" },
-    { layer: "BatchNormalization", params: 400, type: "Normalization" },
-    { layer: "MaxPool2D", params: 0, type: "Downsampling" },
-    { layer: "Conv2D (75 filters)", params: 67575, type: "Feature Extraction" },
-    { layer: "Dropout (0.5)", params: 0, type: "Regularization" },
-    { layer: "Conv2D (50 filters)", params: 33800, type: "Feature Extraction" },
-    { layer: "Dense (480 units)", params: 96480, type: "Classification" },
-    { layer: "Dense (24 units)", params: 11544, type: "Output" },
-  ],
-  stats: {
-    accuracy: "99.89%",
-    params: "211,299",
-    classes: "24 ASL",
-    latency: "~15ms"
-  }
-};
+const accuracyData = [
+  { epoch: 1, train: 0.8658, val: 0.9893 },
+  { epoch: 2, train: 0.9777, val: 0.9838 },
+  { epoch: 3, train: 0.9844, val: 0.9774 },
+  { epoch: 4, train: 0.9887, val: 1.0000 },
+  { epoch: 5, train: 0.9904, val: 0.9993 },
+  { epoch: 6, train: 0.9922, val: 0.9972 },
+  { epoch: 7, train: 0.9930, val: 0.9727 },
+  { epoch: 8, train: 0.9952, val: 0.9971 },
+  { epoch: 9, train: 0.9969, val: 0.9987 },
+  { epoch: 10, train: 0.9968, val: 0.9960 },
+  { epoch: 15, train: 0.9982, val: 0.9980 },
+  { epoch: 20, train: 0.9979, val: 0.9989 },
+];
 
-const islData = {
-  accuracy: [
-    { epoch: 1, train: 0.4481, val: 0.8656 },
-    { epoch: 2, train: 0.9177, val: 0.9483 },
-    { epoch: 5, train: 0.9717, val: 0.9896 },
-    { epoch: 10, train: 0.9840, val: 0.9831 },
-    { epoch: 20, train: 0.9901, val: 0.9675 },
-    { epoch: 26, train: 0.9909, val: 0.9961 },
-    { epoch: 50, train: 0.9995, val: 1.0000 },
-  ],
-  loss: [
-    { epoch: 1, train: 1.9940, val: 0.8351 },
-    { epoch: 2, train: 0.2570, val: 0.3511 },
-    { epoch: 5, train: 0.0960, val: 0.0677 },
-    { epoch: 10, train: 0.0539, val: 0.0780 },
-    { epoch: 26, train: 0.0352, val: 0.0141 },
-    { epoch: 50, train: 0.0040, val: 0.0020 },
-  ],
-  architecture: [
-    { layer: "Conv2D (24 filters)", params: 240, type: "Input" },
-    { layer: "BatchNormalization", params: 96, type: "Normalization" },
-    { layer: "Conv2D (64 filters)", params: 13888, type: "Feature Extraction" },
-    { layer: "Conv2D (128 filters)", params: 147584, type: "Feature Extraction" },
-    { layer: "Conv2D (256 filters)", params: 295168, type: "Feature Extraction" },
-    { layer: "Dense (2352 units)", params: 552720, type: "Classification" },
-    { layer: "Dense (35 units)", params: 82355, type: "Output" },
-  ],
-  stats: {
-    accuracy: "99.95%",
-    params: "1,092,051",
-    classes: "35 ISL",
-    latency: "~22ms"
-  }
-};
+const lossData = [
+  { epoch: 1, train: 0.5274, val: 0.0335 },
+  { epoch: 2, train: 0.0680, val: 0.0532 },
+  { epoch: 3, train: 0.0478, val: 0.0540 },
+  { epoch: 4, train: 0.0355, val: 0.0048 },
+  { epoch: 5, train: 0.0283, val: 0.0054 },
+  { epoch: 10, train: 0.0102, val: 0.0075 },
+  { epoch: 20, train: 0.0059, val: 0.0024 },
+];
 
-export function ModelInsights({ language = 'ASL' }: { language?: 'ASL' | 'ISL' }) {
-  const data = language === 'ASL' ? aslData : islData;
+const architecture = [
+  { layer: "Conv2D (100 filters)", params: 1000, type: "Feature Extraction" },
+  { layer: "BatchNormalization", params: 400, type: "Normalization" },
+  { layer: "MaxPool2D", params: 0, type: "Downsampling" },
+  { layer: "Conv2D (75 filters)", params: 67575, type: "Feature Extraction" },
+  { layer: "Dropout (0.5)", params: 0, type: "Regularization" },
+  { layer: "Conv2D (50 filters)", params: 33800, type: "Feature Extraction" },
+  { layer: "Dense (480 units)", params: 96480, type: "Classification" },
+  { layer: "Dense (24 units)", params: 11544, type: "Output" },
+];
+
+const vggAccuracyData = [
+  { epoch: 1, train: 1.0000, val: 1.0000 },
+  { epoch: 5, train: 1.0000, val: 1.0000 },
+  { epoch: 10, train: 1.0000, val: 1.0000 },
+  { epoch: 15, train: 1.0000, val: 1.0000 },
+  { epoch: 20, train: 1.0000, val: 1.0000 },
+];
+
+const vggArchitecture = [
+  { layer: "VGG16 Base (Frozen)", params: 14714688, type: "Transfer Learning" },
+  { layer: "Flatten", params: 0, type: "Vectorization" },
+  { layer: "Dense (4096)", params: 102764544, type: "Fully Connected" },
+  { layer: "Dense (4096)", params: 16781312, type: "Fully Connected" },
+  { layer: "Dense (6 classes)", params: 24582, type: "Output (Softmax)" },
+];
+
+export function ModelInsights() {
+  const [modelType, setModelType] = React.useState<'cnn' | 'vgg'>('vgg');
+  
+  const currentAccuracy = modelType === 'cnn' ? accuracyData : vggAccuracyData;
+  const currentArch = modelType === 'cnn' ? architecture : vggArchitecture;
 
   return (
     <div className="space-y-8 pb-12">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Model Performance</h2>
+          <p className="text-slate-500 text-sm">Comparative analysis of our recognition engines</p>
+        </div>
+        <div className="flex bg-slate-100 p-1 rounded-xl">
+          <button 
+            onClick={() => setModelType('cnn')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${modelType === 'cnn' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}
+          >
+            Custom CNN
+          </button>
+          <button 
+            onClick={() => setModelType('vgg')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${modelType === 'vgg' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}
+          >
+            VGG16 Transfer
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Test Accuracy", value: data.stats.accuracy, icon: Activity, color: "text-emerald-600", bg: "bg-emerald-50" },
-          { label: "Total Params", value: data.stats.params, icon: Cpu, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "Classes", value: data.stats.classes, icon: Grid3X3, color: "text-purple-600", bg: "bg-purple-50" },
-          { label: "Latency", value: data.stats.latency, icon: Zap, color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "Test Accuracy", value: modelType === 'vgg' ? "100.0%" : "99.89%", icon: Activity, color: "text-emerald-600", bg: "bg-emerald-50" },
+          { label: "Total Params", value: modelType === 'vgg' ? "138.3M" : "211,299", icon: Cpu, color: "text-blue-600", bg: "bg-blue-50" },
+          { label: "Classes", value: modelType === 'vgg' ? "6 Signs" : "24 ASL", icon: Grid3X3, color: "text-purple-600", bg: "bg-purple-50" },
+          { label: "Latency", value: modelType === 'vgg' ? "~45ms" : "~15ms", icon: Zap, color: "text-amber-600", bg: "bg-amber-50" },
         ].map((stat, i) => (
           <motion.div
             key={stat.label}
@@ -114,10 +120,10 @@ export function ModelInsights({ language = 'ASL' }: { language?: 'ASL' | 'ISL' }
           <h3 className="text-lg font-bold text-slate-900 mb-6">Training vs Validation Accuracy</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.accuracy}>
+              <LineChart data={currentAccuracy}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="epoch" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} domain={[0.4, 1]} />
+                <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} domain={[0.8, 1]} />
                 <Tooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                 />
@@ -139,7 +145,7 @@ export function ModelInsights({ language = 'ASL' }: { language?: 'ASL' | 'ISL' }
           <h3 className="text-lg font-bold text-slate-900 mb-6">Training vs Validation Loss</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.loss}>
+              <LineChart data={lossData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="epoch" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
@@ -158,9 +164,11 @@ export function ModelInsights({ language = 'ASL' }: { language?: 'ASL' | 'ISL' }
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Architecture Visualization */}
         <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-900 mb-6">CNN Architecture Summary</h3>
+          <h3 className="text-lg font-bold text-slate-900 mb-6">
+            {modelType === 'vgg' ? 'VGG16 Transfer Learning' : 'Custom CNN Architecture'}
+          </h3>
           <div className="space-y-3">
-            {data.architecture.map((layer, i) => (
+            {currentArch.map((layer, i) => (
               <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100">
                 <div className="flex items-center gap-4">
                   <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-xs font-bold text-slate-400 border border-slate-200">

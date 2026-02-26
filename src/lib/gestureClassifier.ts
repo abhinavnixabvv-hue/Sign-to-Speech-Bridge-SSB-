@@ -68,7 +68,7 @@ export function classifyGesture(landmarks: NormalizedLandmark[]): GestureResult 
 
   // C: Claw / Curved
   const distThumbIndex = getDistance(thumbTip, landmarks[8]) / handSize;
-  if (!indexExtended && !middleExtended && !ringExtended && !pinkyExtended) {
+  if (!indexExtended && !middleExtended && !ringExtended && !pinkyExtended && !thumbDown) {
     if (distThumbIndex > 0.6 && thumbTip.x < landmarks[8].x) {
        return { name: "C", emoji: "🤏", category: "alphabet" };
     }

@@ -85,7 +85,13 @@ export function SignLanguageRecognition({ onBack }: SignLanguageRecognitionProps
   const [detectedSign, setDetectedSign] = useState<GestureResult | null>(null);
   const [currentLandmarks, setCurrentLandmarks] = useState<NormalizedLandmark[][]>([]);
   const [detectionLog, setDetectionLog] = useState<{ gesture: GestureResult; time: string }[]>([]);
+  const [typedString, setTypedString] = useState("");
+  const [isTypingMode, setIsTypingMode] = useState(false);
+  const [isFrozen, setIsFrozen] = useState(false);
   const lastDetectedRef = useRef<string | null>(null);
+  const lastAlphabetRef = useRef<string | null>(null);
+  const isTriggerActiveRef = useRef(false);
+  const lastDetectionTimeRef = useRef<number>(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number>(0);
@@ -98,63 +104,116 @@ export function SignLanguageRecognition({ onBack }: SignLanguageRecognitionProps
 
   const runDetectionLoop = useCallback(() => {
     const video = videoRef.current;
-    if (!video || !streamRef.current) return;
+    if (!video || !streamRef.current || video.paused || video.ended) {
+      animFrameRef.current = requestAnimationFrame(runDetectionLoop);
+      return;
+    }
 
-    const result = detect(video);
-    if (result && result.landmarks.length > 0) {
-      // Ensure we have enough smoothers
-      while (smoothersRef.current.length < result.landmarks.length) {
-        smoothersRef.current.push(new LandmarkSmoother(5)); // Window size of 5 with weighted average for optimal stability/latency
-      }
+    try {
+      const result = detect(video);
+      if (result && result.landmarks.length > 0) {
+        const handCount = result.landmarks.length;
+        
+        // Freeze logic: If 2 or more hands are detected, stop updating the sign
+        if (handCount > 1) {
+          setIsFrozen(true);
+          // We still update landmarks to show the skeletons
+          while (smoothersRef.current.length < handCount) {
+            smoothersRef.current.push(new LandmarkSmoother(5));
+          }
+          const smoothedLandmarks = result.landmarks.map((handLandmarks, i) => 
+            smoothersRef.current[i].add(handLandmarks)
+          );
+          setCurrentLandmarks(smoothedLandmarks);
+          
+          animFrameRef.current = requestAnimationFrame(runDetectionLoop);
+          return;
+        }
 
-      // Apply smoothing to each hand
-      const smoothedLandmarks = result.landmarks.map((handLandmarks, i) => 
-        smoothersRef.current[i].add(handLandmarks)
-      );
+        setIsFrozen(false);
+        
+        // Ensure we have enough smoothers
+        while (smoothersRef.current.length < result.landmarks.length) {
+          smoothersRef.current.push(new LandmarkSmoother(5)); // Window size of 5 with weighted average for optimal stability/latency
+        }
 
-      setCurrentLandmarks(smoothedLandmarks);
+        // Apply smoothing to each hand
+        const smoothedLandmarks = result.landmarks.map((handLandmarks, i) => 
+          smoothersRef.current[i].add(handLandmarks)
+        );
 
-      // Classify the first detected hand using smoothed data
-      let gesture = classifyGesture(smoothedLandmarks[0]);
-      
-      // If rule-based fails or for specific complex signs, use KNN
-      if (!gesture || gesture.name === "HELP" || gesture.name === "HELLO") {
-        const knnResult = knnRef.current.predict(smoothedLandmarks[0]);
-        if (knnResult && knnResult.confidence > 0.6) {
-          const signInfo = commonSigns.find(s => s.sign === knnResult.label);
-          if (signInfo) {
-            gesture = { 
-              name: signInfo.sign, 
-              emoji: signInfo.emoji, 
-              category: signInfo.category 
-            };
+        setCurrentLandmarks(smoothedLandmarks);
+
+        // Classify the first detected hand using smoothed data
+        let gesture = classifyGesture(smoothedLandmarks[0]);
+        
+        // If rule-based fails or for specific complex signs, use KNN
+        if (!gesture || gesture.name === "HELP" || gesture.name === "HELLO") {
+          const knnResult = knnRef.current.predict(smoothedLandmarks[0]);
+          if (knnResult && knnResult.confidence > 0.6) {
+            const signInfo = commonSigns.find(s => s.sign === knnResult.label);
+            if (signInfo) {
+              gesture = { 
+                name: signInfo.sign, 
+                emoji: signInfo.emoji, 
+                category: signInfo.category 
+              };
+            }
           }
         }
-      }
 
-      if (gesture) {
-        setDetectedSign(gesture);
-        // Only log if different from last detection to avoid spam
-        if (gesture.name !== lastDetectedRef.current) {
-          lastDetectedRef.current = gesture.name;
-          setDetectionLog((prev) => {
-            const updated = [{ gesture, time: new Date().toLocaleTimeString() }, ...prev];
-            return updated.slice(0, 20);
-          });
+        if (gesture) {
+          const now = Date.now();
+          
+          // Only process if not in cooldown (3 seconds)
+          if (now - lastDetectionTimeRef.current < 3000) {
+            animFrameRef.current = requestAnimationFrame(runDetectionLoop);
+            return;
+          }
+
+          setDetectedSign(gesture);
+          lastDetectionTimeRef.current = now;
+
+          // Logic for Gesture Typing
+          if (isTypingMode) {
+            if (gesture.name === "Thumbs Down / NO" || gesture.name === "Thumbs Down") {
+              if (!isTriggerActiveRef.current && lastAlphabetRef.current) {
+                setTypedString(prev => prev + lastAlphabetRef.current);
+                isTriggerActiveRef.current = true;
+              }
+            } else if (gesture.category === "alphabet") {
+              lastAlphabetRef.current = gesture.name;
+              isTriggerActiveRef.current = false;
+            } else {
+              isTriggerActiveRef.current = false;
+            }
+          }
+
+          // Only log if different from last detection to avoid spam
+          if (gesture.name !== lastDetectedRef.current) {
+            lastDetectedRef.current = gesture.name;
+            setDetectionLog((prev) => {
+              const updated = [{ gesture, time: new Date().toLocaleTimeString() }, ...prev];
+              return updated.slice(0, 20);
+            });
+          }
+        } else {
+          setDetectedSign(null);
+          lastDetectedRef.current = null;
         }
       } else {
+        setCurrentLandmarks([]);
         setDetectedSign(null);
-        lastDetectedRef.current = null;
+        setIsFrozen(false);
+        // Clear smoothers when no hands are detected to avoid "ghost" smoothing on re-entry
+        smoothersRef.current.forEach(s => s.clear());
       }
-    } else {
-      setCurrentLandmarks([]);
-      setDetectedSign(null);
-      // Clear smoothers when no hands are detected to avoid "ghost" smoothing on re-entry
-      smoothersRef.current.forEach(s => s.clear());
+    } catch (err) {
+      console.error("Detection error:", err);
     }
 
     animFrameRef.current = requestAnimationFrame(runDetectionLoop);
-  }, [detect]);
+  }, [detect, isTypingMode, commonSigns]);
 
   const startCamera = async () => {
     try {
@@ -202,6 +261,12 @@ export function SignLanguageRecognition({ onBack }: SignLanguageRecognitionProps
     setCurrentLandmarks([]);
     smoothersRef.current.forEach(s => s.clear());
   };
+
+  useEffect(() => {
+    if (activeTab !== "camera" && isCameraActive) {
+      stopCamera();
+    }
+  }, [activeTab, isCameraActive]);
 
   useEffect(() => {
     return () => {
@@ -341,14 +406,24 @@ export function SignLanguageRecognition({ onBack }: SignLanguageRecognitionProps
 
                   {/* Detection overlay */}
                   <AnimatePresence>
-                    {detectedSign && (
+                    {(detectedSign || isFrozen) && (
                        <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
-                        className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-xl bg-emerald-600 px-6 py-3 text-white shadow-xl"
+                        className={`absolute bottom-4 left-1/2 -translate-x-1/2 rounded-xl px-6 py-3 text-white shadow-xl flex items-center gap-3 ${
+                          isFrozen ? 'bg-amber-500' : 'bg-emerald-600'
+                        }`}
                       >
-                        <p className="text-lg font-semibold">{detectedSign.emoji} {detectedSign.name}</p>
+                        {isFrozen ? (
+                          <>
+                            <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
+                            <p className="text-lg font-bold uppercase tracking-tight">Sign Frozen</p>
+                            {detectedSign && <span className="opacity-80">({detectedSign.emoji} {detectedSign.name})</span>}
+                          </>
+                        ) : (
+                          <p className="text-lg font-semibold">{detectedSign?.emoji} {detectedSign?.name}</p>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -401,7 +476,7 @@ export function SignLanguageRecognition({ onBack }: SignLanguageRecognitionProps
             </div>
 
             {/* Camera Controls */}
-            <div className="mt-4 flex justify-center">
+            <div className="mt-4 flex flex-wrap justify-center gap-4">
               <Button
                 variant={isCameraActive ? "destructive" : "hero"}
                 size="lg"
@@ -426,7 +501,72 @@ export function SignLanguageRecognition({ onBack }: SignLanguageRecognitionProps
                   </>
                 )}
               </Button>
+
+              <Button
+                variant={isTypingMode ? "hero" : "outline"}
+                size="lg"
+                onClick={() => setIsTypingMode(!isTypingMode)}
+                className={`gap-2 ${isTypingMode ? 'bg-emerald-600' : 'border-emerald-200 text-emerald-600'}`}
+              >
+                <Type className="h-5 w-5" />
+                {isTypingMode ? "Typing Mode: ON" : "Enable Gesture Typing"}
+              </Button>
             </div>
+
+            {/* Typed Text Display */}
+            <AnimatePresence>
+              {isTypingMode && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="mt-6 bg-white p-6 rounded-2xl border-2 border-emerald-100 shadow-sm"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                      <Type className="h-4 w-4" />
+                      Gesture Typed Text
+                    </h3>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setTypedString(prev => prev.slice(0, -1))}
+                        className="text-slate-400 hover:text-amber-600"
+                        disabled={!typedString}
+                      >
+                        <ArrowLeft className="h-4 w-4 mr-2" /> Backspace
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setTypedString("")}
+                        className="text-slate-400 hover:text-red-500"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" /> Clear
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="min-h-[80px] bg-slate-50 rounded-xl p-4 border border-slate-100">
+                    {typedString ? (
+                      <p className="text-3xl font-bold tracking-widest text-slate-900 break-all">
+                        {typedString}
+                      </p>
+                    ) : (
+                      <p className="text-slate-400 italic text-sm">
+                        Show an alphabet, then flash a "Thumb Down" 👎 to type it...
+                      </p>
+                    )}
+                  </div>
+                  <div className="mt-4 flex items-start gap-3 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                    <Info className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                    <p className="text-xs text-blue-700 leading-relaxed">
+                      <b>How to type:</b> 1. Show the alphabet sign. 2. Quickly show a <b>Thumb Down</b> 👎 gesture. The last seen alphabet will be added to the text above.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Info Panel */}

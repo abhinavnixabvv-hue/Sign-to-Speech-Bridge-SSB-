@@ -42,7 +42,12 @@ const wordSigns: Record<string, string> = {
   'NURSE': '👩‍⚕️',
   'FEVER': '🤒',
   'WATER': '💧',
-  'FOOD': '🍱'
+  'FOOD': '🍱',
+  'FIRE': '🔥',
+  'POLICE': '👮',
+  'CHOKING': '🤢',
+  'FAMILY': '📞',
+  'ALLERGY': '🤧'
 };
 
 export function TextToSign() {
@@ -60,17 +65,42 @@ export function TextToSign() {
   };
   const getSignForWord = (word: string) => wordSigns[word] || null;
 
+  // Process text into a mix of words and characters for display
+  const getDisplayItems = () => {
+    const items: { type: 'word' | 'char', value: string, sign: string }[] = [];
+    const rawWords = text.toUpperCase().split(/(\s+)/);
+    
+    rawWords.forEach(part => {
+      if (part.trim().length === 0) {
+        if (part.length > 0) items.push({ type: 'char', value: ' ', sign: ' ' });
+        return;
+      }
+      
+      const wordSign = getSignForWord(part);
+      if (wordSign) {
+        items.push({ type: 'word', value: part, sign: wordSign });
+      } else {
+        part.split('').forEach(char => {
+          items.push({ type: 'char', value: char, sign: getSignForChar(char) });
+        });
+      }
+    });
+    return items;
+  };
+
+  const displayItems = getDisplayItems();
+
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (isPlaying && currentIndex < text.length - 1) {
+    if (isPlaying && currentIndex < displayItems.length - 1) {
       timer = setTimeout(() => {
         setCurrentIndex(prev => prev + 1);
-      }, 800);
-    } else if (currentIndex === text.length - 1) {
+      }, 1000);
+    } else if (currentIndex === displayItems.length - 1) {
       setIsPlaying(false);
     }
     return () => clearTimeout(timer);
-  }, [isPlaying, currentIndex, text]);
+  }, [isPlaying, currentIndex, displayItems]);
 
   const handlePlay = () => {
     if (text.length === 0) return;
@@ -193,14 +223,14 @@ export function TextToSign() {
                     exit={{ scale: 1.5, opacity: 0 }}
                     className="text-9xl filter drop-shadow-[0_0_30px_rgba(16,185,129,0.3)]"
                   >
-                    {currentIndex >= 0 ? getSignForChar(text.toUpperCase()[currentIndex]) : '⌨️'}
+                    {currentIndex >= 0 ? displayItems[currentIndex].sign : '⌨️'}
                   </motion.div>
                   <div className="text-center">
                     <p className="text-4xl font-bold text-white tracking-widest">
-                      {currentIndex >= 0 ? text.toUpperCase()[currentIndex] : 'READY'}
+                      {currentIndex >= 0 ? displayItems[currentIndex].value : 'READY'}
                     </p>
                     <div className="mt-4 flex gap-1 justify-center">
-                      {text.split('').map((char, i) => (
+                      {displayItems.map((item, i) => (
                         <div 
                           key={i} 
                           className={`h-1.5 rounded-full transition-all duration-300 ${
@@ -213,8 +243,8 @@ export function TextToSign() {
                 </div>
               ) : (
                 <div className="w-full h-full flex flex-wrap justify-center gap-6 content-center">
-                  {text.length > 0 ? (
-                    text.toUpperCase().split('').map((char, i) => (
+                  {displayItems.length > 0 ? (
+                    displayItems.map((item, i) => (
                       <motion.div
                         key={i}
                         initial={{ opacity: 0, y: 10 }}
@@ -224,10 +254,13 @@ export function TextToSign() {
                           i === currentIndex ? 'bg-emerald-600 border-emerald-400 scale-110 shadow-lg shadow-emerald-900/50' : 'bg-slate-800 border-slate-700 hover:border-slate-600'
                         }`}
                       >
-                        <span className="text-5xl">{getSignForChar(char)}</span>
+                        <span className="text-5xl">{item.sign}</span>
                         <span className={`text-xs font-bold ${i === currentIndex ? 'text-white' : 'text-slate-500'}`}>
-                          {char === ' ' ? 'SPACE' : char}
+                          {item.value === ' ' ? 'SPACE' : item.value}
                         </span>
+                        {item.type === 'word' && (
+                          <div className="absolute -top-2 -right-2 bg-emerald-500 text-[10px] text-white px-1.5 py-0.5 rounded-full font-bold">WORD</div>
+                        )}
                       </motion.div>
                     ))
                   ) : (
