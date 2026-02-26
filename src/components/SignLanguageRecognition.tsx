@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Camera, CameraOff, Info, Hand, Loader2, Trash2, BookOpen, Type, Siren } from "lucide-react";
+import { ArrowLeft, Camera, CameraOff, Info, Hand, Loader2, Trash2, BookOpen, Type, Siren, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHandLandmarker } from "@/hooks/useHandLandmarker";
 import { classifyGesture, type GestureResult } from "@/lib/gestureClassifier";
@@ -8,25 +8,44 @@ import { HandLandmarkCanvas } from "@/components/HandLandmarkCanvas";
 import { SignLanguageLibrary } from "@/components/SignLanguageLibrary";
 import { TextToSign } from "@/components/TextToSign";
 import { EmergencySigns } from "@/components/EmergencySigns";
+import { ModelInsights } from "@/components/ModelInsights";
 import { LandmarkSmoother } from "@/lib/smoothing";
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision";
 
 type SignLanguage = 'ASL' | 'ISL';
 
-type SignTab = "camera" | "library" | "textToSign" | "emergency";
+type SignTab = "camera" | "library" | "textToSign" | "emergency" | "insights";
 
 interface SignLanguageRecognitionProps {
   onBack: () => void;
 }
 
 const aslSigns = [
-  { sign: "A / E / M / N / S / T / Fist", emoji: "✊", description: "All fingers closed into a fist", category: "alphabet" },
-  { sign: "B / W / Hello", emoji: "✋", description: "All fingers extended, open hand", category: "alphabet" },
-  { sign: "C / G / Q", emoji: "🤏", description: "Thumb and index finger pinching", category: "alphabet" },
-  { sign: "D / I / L / P / X / Z / One", emoji: "☝️", description: "Only index finger up", category: "alphabet" },
-  { sign: "F / O / OK", emoji: "👌", description: "Thumb + index tips touching, others up", category: "alphabet" },
-  { sign: "H / K / R / U / V / Two", emoji: "✌️", description: "Index + middle up, rest closed", category: "alphabet" },
-  { sign: "J / Y / Call Me", emoji: "🤙", description: "Thumb + pinky extended like a phone", category: "alphabet" },
+  { sign: "A", emoji: "✊", description: "Fist, thumb on side", category: "alphabet" },
+  { sign: "B", emoji: "✋", description: "Open hand, fingers together", category: "alphabet" },
+  { sign: "C", emoji: "🤏", description: "Curved hand like a C", category: "alphabet" },
+  { sign: "D", emoji: "☝️", description: "Index finger up, others touch thumb", category: "alphabet" },
+  { sign: "E", emoji: "✊", description: "Fist, fingers curled over thumb", category: "alphabet" },
+  { sign: "F", emoji: "👌", description: "OK sign, thumb and index touch", category: "alphabet" },
+  { sign: "G", emoji: "🤏", description: "Index and thumb pointing forward", category: "alphabet" },
+  { sign: "H", emoji: "✌️", description: "Index and middle pointing forward", category: "alphabet" },
+  { sign: "I", emoji: "☝️", description: "Pinky finger up", category: "alphabet" },
+  { sign: "K", emoji: "✌️", description: "Index and middle up, thumb touches middle", category: "alphabet" },
+  { sign: "L", emoji: "☝️", description: "L shape with thumb and index", category: "alphabet" },
+  { sign: "M", emoji: "✊", description: "Thumb under three fingers", category: "alphabet" },
+  { sign: "N", emoji: "✊", description: "Thumb under two fingers", category: "alphabet" },
+  { sign: "O", emoji: "👌", description: "Circle with all fingers and thumb", category: "alphabet" },
+  { sign: "P", emoji: "✌️", description: "K sign pointing downwards", category: "alphabet" },
+  { sign: "Q", emoji: "🤏", description: "G sign pointing downwards", category: "alphabet" },
+  { sign: "R", emoji: "🤞", description: "Index and middle crossed", category: "alphabet" },
+  { sign: "S", emoji: "✊", description: "Fist, thumb over fingers", category: "alphabet" },
+  { sign: "T", emoji: "✊", description: "Thumb under index finger", category: "alphabet" },
+  { sign: "U", emoji: "✌️", description: "Index and middle up and together", category: "alphabet" },
+  { sign: "V", emoji: "✌️", description: "Index and middle up and apart", category: "alphabet" },
+  { sign: "W", emoji: "✋", description: "Index, middle, and ring fingers up", category: "alphabet" },
+  { sign: "X", emoji: "☝️", description: "Index finger hooked", category: "alphabet" },
+  { sign: "Y", emoji: "🤙", description: "Thumb and pinky extended", category: "alphabet" },
+  { sign: "Z", emoji: "☝️", description: "Index finger draws a Z", category: "alphabet" },
   { sign: "Thumbs Up / YES", emoji: "👍", description: "Thumb up, fingers closed", category: "response" },
   { sign: "Thumbs Down / NO", emoji: "👎", description: "Thumb down, fingers closed", category: "response" },
   { sign: "I Love You", emoji: "🤟", description: "Thumb + index + pinky extended", category: "expression" },
@@ -233,6 +252,17 @@ export function SignLanguageRecognition({ onBack }: SignLanguageRecognitionProps
             >
               <Siren className="h-4 w-4" />
               Emergency
+            </button>
+            <button
+              onClick={() => setActiveTab("insights")}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                activeTab === "insights"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <Activity className="h-4 w-4" />
+              Insights
             </button>
           </div>
 
@@ -445,6 +475,8 @@ export function SignLanguageRecognition({ onBack }: SignLanguageRecognitionProps
           <SignLanguageLibrary language={language} />
         ) : activeTab === "textToSign" ? (
           <TextToSign />
+        ) : activeTab === "insights" ? (
+          <ModelInsights />
         ) : (
           <EmergencySigns />
         )}
