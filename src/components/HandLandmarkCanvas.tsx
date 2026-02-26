@@ -16,7 +16,8 @@ export function HandLandmarkCanvas({ landmarks, width, height }: HandLandmarkCan
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.clearRect(0, 0, width, height);
+    // Clear with transparency
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     if (landmarks.length === 0) return;
 
@@ -39,8 +40,8 @@ export function HandLandmarkCanvas({ landmarks, width, height }: HandLandmarkCan
         ctx.beginPath();
         for (let i = 0; i < conn.length; i++) {
           const landmark = handLandmarks[conn[i]];
-          if (i === 0) ctx.moveTo(landmark.x * width, landmark.y * height);
-          else ctx.lineTo(landmark.x * width, landmark.y * height);
+          if (i === 0) ctx.moveTo(landmark.x * canvas.width, landmark.y * canvas.height);
+          else ctx.lineTo(landmark.x * canvas.width, landmark.y * canvas.height);
         }
         ctx.stroke();
       });
@@ -49,19 +50,19 @@ export function HandLandmarkCanvas({ landmarks, width, height }: HandLandmarkCan
       ctx.fillStyle = '#ffffff';
       handLandmarks.forEach(landmark => {
         ctx.beginPath();
-        ctx.arc(landmark.x * width, landmark.y * height, 4, 0, 2 * Math.PI);
+        ctx.arc(landmark.x * canvas.width, landmark.y * canvas.height, 4, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
       });
     });
-  }, [landmarks, width, height]);
+  }, [landmarks]);
 
   return (
     <canvas
       ref={canvasRef}
       width={width}
       height={height}
-      className="absolute inset-0 pointer-events-none"
+      className="absolute inset-0 w-full h-full object-cover pointer-events-none"
     />
   );
 }
